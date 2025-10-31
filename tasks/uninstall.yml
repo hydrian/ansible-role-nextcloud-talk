@@ -1,0 +1,4 @@
+- name: Uninstalling Nextcloud Talk flatpak
+  community.general.flatpak:
+    name: com.nextcloud.talk
+    state: absent

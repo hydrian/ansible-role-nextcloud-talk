@@ -1,0 +1,72 @@
+---
+# - name: Testing if required variables are set
+#   ansible.builtin.fail:
+#     msg: "Variable is undefined"
+#   when:
+#     - version is undefined
+- name: "Creating temp dir on controller"
+  ansible.builtin.tempfile:
+    state: 'directory'
+    suffix: 'nctalk'
+  register: controller_temp_dir
+  delegate_to: 'localhost'
+  become: false
+  run_once: true
+  changed_when: false
+- name: "Setting install facts"
+  ansible.builtin.set_fact:
+    flatpak_temp_path: "{{ controller_temp_dir.path }}/Nextcloud.Talk-{{ version }}-linux-x64.flatpak"
+  delegate_to: 'localhost'
+  become: false
+  run_once: true
+  changed_when: false
+- name: "Downloading flatpak from github to controller"
+  ansible.builtin.get_url:
+    url: "https://github.com/nextcloud-releases/talk-desktop/releases/download/v{{ version }}/Nextcloud.Talk-linux-x64.flatpak"
+    dest: "{{ flatpak_temp_path }}"
+    mode: "644"
+  delegate_to: 'localhost'
+  become: false
+  run_once: true
+- name: "Creating remote temp directory"
+  ansible.builtin.file:
+    path: "{{ controller_temp_dir.path }}"
+    recurse: true
+    mode: "755"
+- name: "Copy flatpak to target machine"
+  ansible.builtin.copy:
+    src: "{{ flatpak_temp_path }}"
+    dest: "{{ flatpak_temp_path }}"
+    mode: "644"
+    owner: root
+    group: root
+- name: Detecting if Nextcloud Talk is already installed
+  ansible.builtin.command:
+    cmd: '/usr/bin/flatpak info com.nextcloud.talk'
+  register: flatpak_info
+- name: "Uninstalling old version of Nextcloud Talk"
+  ansible.builtin.include_tasks: uninstall.yml
+  when: flatpak_info.rc == 0
+- name: "Running flatpak install command"
+  ansible.builtin.command:
+    argv: [
+      '/usr/bin/flatpak',
+      'install',
+      '--system',
+      '--noninteractive',
+      '--assumeyes',
+      '--or-update',
+      "{{ flatpak_temp_path }}"
+    ]
+- name: "Removing remote temp install package"
+  ansible.builtin.file:
+    path: "{{ flatpak_temp_path | basename }}"
+    state: absent
+- name: "Removing controller temp install package"
+  ansible.builtin.file:
+    path: "{{ flatpak_temp_path | basename }}"
+    state: absent
+  delegate_to: 'localhost'
+  become: false
+  run_once: true
+  

@@ -1,2 +1,12 @@
 ---
-# tasks file for ansible-role-template-galaxy
+- name: Testing if required variables are set
+  ansible.builtin.fail:
+    msg: "Variable is undefined"
+  when:
+    - version is undefined
+- name: "Uninstalling Nextcloud Talk Flatpak"
+  ansible.builtin.include_tasks: uninstall.yml
+  when: state == 'absent'
+- name: "Installing Nextcloud Talk Flatpak"
+  ansible.builtin.include_tasks: install.yml
+  when: state == 'present'

@@ -1,2 +1,4 @@
 ---
-# defaults file for ansible-role-template-galaxy
+version: 'latest'
+state: 'present'
+
